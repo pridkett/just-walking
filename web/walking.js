@@ -30,7 +30,7 @@ const myMap = L.map('mapid')
 // file. The CSV works fairly well, but there's no typing associated with the
 // fields in the CSV. This maps the header columns to their data types for the
 // Google Sheets CSV export.
-/** @type {!Object<string, function} */
+/** @type {!Object<string, function>} */
 const columnDataTypes = {
   'Date': function (x) { return new Date(x) },
   'Steps': function (x) { return parseInt(x) },
@@ -57,52 +57,77 @@ function showMap (latitude, longitude) {
 }
 
 /**
- * @param {*} text
+ * Parse and plot the coordinates
  *
- * This method borrows a little bit from this StackOverflow post on how to break
- * out of a foreach loop: https://stackoverflow.com/a/2641374/57626
- *
- * TODO: This should break straight line segments in half if they end in the
- * middle of a day.
+ * This uses lazy parsing of the coordinates because the path might be very
+ * long, and not evaluating those records ahead of time reduces computation
+ * slightly.
+ * 
+ * @param {Array.<String>} coordinates an unparsed array of JSON records that
+ *   represent the map to be plotted
+ * @param {Array.<{Date: Number, Steps: Number, Miles: Number, 'Total Steps': Number, 'Total Miles': Number>} spreadsheet line split CSV of the walking progress
+ *   CSV
  */
-function parseCoordinates (text, spreadsheet) {
-  const coordinates = text.split('\n')
+function parseCoordinates (coordinates, spreadsheet) {
   const first = JSON.parse(coordinates[0])
-  let polygonCoords = [first['start']]
   let lastPoint = []
-  const BreakException = {}
-  let rowIdx = 0
+  let coordIdx = 0
 
   showMap(first['start'][0], first['start'][1])
 
-  try {
-    coordinates.forEach(function (record) {
-      const coord = JSON.parse(record)
+  // iterate over each day's results in the spreadsheet
+  let coord = JSON.parse(coordinates[coordIdx])
+  for (let rowIdx = 0; rowIdx < spreadsheet.length; rowIdx++) {
+    let polygonCoords = [coord['start']]
+
+    // The `done` variable is used to avoid accidentally skipping the last
+    // bit of the final segement by checking coordIdx === coordinates.length - 1
+    // later on in the loop
+    let done = false
+    while (coord['total'] < spreadsheet[rowIdx]['Total Miles']) {
       polygonCoords.push(coord['stop'])
-      lastPoint = coord['stop']
-      while (coord['total'] > spreadsheet[rowIdx]['Total Miles']) {
-        const tooltipMsp = `<b>${spreadsheet[rowIdx]['Miles']}</b> miles on <b>${spreadsheet[rowIdx]['Date'].toLocaleDateString()}</b>`
-        const polyline = L.polyline(polygonCoords, defaultPolylineStyle).bindTooltip(tooltipMsp).addTo(myMap)
-
-        polyline.on('mouseover', function (e) {
-          const layer = e.target
-          layer.setStyle(highlightPolylineStyle)
-        })
-
-        polyline.on('mouseout', function (e) {
-          const layer = e.target
-          layer.setStyle(defaultPolylineStyle)
-        })
-
-        polygonCoords = [coord['stop']]
-        rowIdx = rowIdx + 1
-        if (rowIdx >= spreadsheet.length) {
-          throw BreakException
-        }
+      if (coordIdx === coordinates.length - 1) {
+        lastPoint = coord['stop']
+        done = true
+        break
       }
+      coord = JSON.parse(coordinates[++coordIdx])
+    }
+
+    if (!done) {
+      // add the stub of what is left
+      const fractionalDistance = (spreadsheet[rowIdx]['Total Miles'] - coord['total'] + coord['distance']) / coord['distance']
+
+      // apply a simple linear scaling for the distance on the current point
+      const lastPointLat = (coord['stop'][0] - coord['start'][0]) * fractionalDistance + coord['start'][0]
+      const lastPointLong = (coord['stop'][1] - coord['start'][1]) * fractionalDistance + coord['start'][1]
+      const lastPointDistance = coord['distance'] * (1 - fractionalDistance)
+
+      coord['start'] = [lastPointLat, lastPointLong]
+      coord['distance'] = lastPointDistance
+      lastPoint = coord['stop']
+      // add the last stub onto the polyline - this is the same as the new first
+      // point of the line segment that wasn't completed
+      polygonCoords.push(coord['start'])
+    }
+
+    // draw the polyline
+    const tooltip = `<b>${spreadsheet[rowIdx]['Miles']}</b> miles on <b>${spreadsheet[rowIdx]['Date'].toLocaleDateString()}</b>`
+    const polyline = L.polyline(polygonCoords, defaultPolylineStyle).bindTooltip(tooltip).addTo(myMap)
+    polyline.on('mouseover', function (e) {
+      const layer = e.target
+      layer.setStyle(highlightPolylineStyle)
     })
-  } catch (e) {
-    if (e !== BreakException) throw e
+
+    polyline.on('mouseout', function (e) {
+      const layer = e.target
+      layer.setStyle(defaultPolylineStyle)
+    })
+
+    // stop trying to iterate if we're at the end of the list
+    if (done) {
+      break
+    }
   }
   myMap.setView([lastPoint[0], lastPoint[1]], 10)
 }
@@ -129,7 +154,7 @@ try {
     window.fetch(spreadsheetUrl)
       .then(response => response.text())
       .then(response => parseCSV(response))
-  ]).then(data => parseCoordinates(data[0], data[1]))
+  ]).then(data => parseCoordinates(data[0].split('\n'), data[1]))
 } catch (error) {
   console.log(error)
   throw error
