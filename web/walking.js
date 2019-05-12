@@ -25,25 +25,36 @@ const pathFilename = 'walkingPath.jsonl'
 
 const myMap = L.map('mapid')
 
-// Data types needed for the CSV file with walking distances
-// Google Sheets doesn't have an option for automatically publishing as a JSON
-// file. The CSV works fairly well, but there's no typing associated with the
-// fields in the CSV. This maps the header columns to their data types for the
-// Google Sheets CSV export.
-/** @type {!Object<string, function>} */
+/**
+ * Data types needed for the CSV file with walking distances.
+ *
+ * Google Sheets doesn't have an option for automatically publishing as a JSON
+ * file. The CSV works fairly well, but there's no typing associated with the
+ * fields in the CSV. This maps the header columns to their data types for the
+ * Google Sheets CSV export.
+ * @type {!Object.<string, function>}
+ */
 const columnDataTypes = {
   'Date': function (x) { return new Date(x) },
   'Steps': function (x) { return parseInt(x) },
   'Miles': function (x) { return parseFloat(x) },
+  'Walking Time': function (x) { return parseFloat(x) },
   'Total Steps': function (x) { return parseInt(x) },
-  'Total Miles': function (x) { return parseFloat(x) }
+  'Total Miles': function (x) { return parseFloat(x) },
+  'Total Walking Time': function (x) { return parseFloat(x) }
 }
 
 // Styles for the polylines showing the path.
 // these are defined because of issues with figlet and className
-/** @type {!Object<string, string|number} */
+/**
+ * The default style for the line when the mouse is not hovering
+ * @type {!Object.<string, (string|number)>}
+ */
 const defaultPolylineStyle = { color: '#3388ff', opacity: 1, weight: 3 }
-/** @type {!Object<string, string|number} */
+/**
+ * The style applied to lines during a mouse hover.
+ * @type {!Object.<string, (string|number)>}
+ */
 const highlightPolylineStyle = { color: 'red', opacity: 1, weight: 5 }
 
 function showMap (latitude, longitude) {
@@ -62,22 +73,27 @@ function showMap (latitude, longitude) {
  * This uses lazy parsing of the coordinates because the path might be very
  * long, and not evaluating those records ahead of time reduces computation
  * slightly.
- * 
- * @param {Array.<String>} coordinates an unparsed array of JSON records that
+ *
+ * @param {Array.<string>} coordinates an unparsed array of JSON records that
  *   represent the map to be plotted
- * @param {Array.<{Date: Number, Steps: Number, Miles: Number, 'Total Steps': Number, 'Total Miles': Number>} spreadsheet line split CSV of the walking progress
+ * @param {Array.<{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}>} spreadsheet line split CSV of the walking progress
  *   CSV
  */
 function parseCoordinates (coordinates, spreadsheet) {
+  /** @type {Array.<number>} */
   const first = JSON.parse(coordinates[0])
-  let lastPoint = []
+  /** @type {Array.<number>} */
+  let lastPoint = [0, 0]
+  /** @type {number} */
   let coordIdx = 0
 
   showMap(first['start'][0], first['start'][1])
 
-  // iterate over each day's results in the spreadsheet
+  /** @type {{start: Array.<number>, stop: Array.<number>, distance: number, total: number}} */
   let coord = JSON.parse(coordinates[coordIdx])
+  // iterate over each day's results in the spreadsheet
   for (let rowIdx = 0; rowIdx < spreadsheet.length; rowIdx++) {
+    /** @type {Array.<Array.<number>>} */
     let polygonCoords = [coord['start']]
 
     // The `done` variable is used to avoid accidentally skipping the last
@@ -132,15 +148,32 @@ function parseCoordinates (coordinates, spreadsheet) {
   myMap.setView([lastPoint[0], lastPoint[1]], 10)
 }
 
+/**
+ * Converts the CSV from a string into an array of objects
+ *
+ * In addition to splitting the CSV into lines and parsing each line into an
+ * object, this makes use of {@link columnDataTypes} to assign the appropriate
+ * data type to each of the columns in the CSV
+ *
+ * @param {string} spreadsheet the CSV spreadsheet as a string
+ * @return {Array.<{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}>}
+ */
 function parseCSV (spreadsheet) {
-  spreadsheet = spreadsheet.split('\n')
-  const columnNames = spreadsheet.shift().split(',').map(x => x.trim())
+  /** @type {Array.<string>} */
+  const spreadsheetLines = spreadsheet.split('\n')
+  /** @type {Array.<string>} */
+  const columnNames = spreadsheetLines.shift().split(',').map(x => x.trim())
+  /** @type {Array.<{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}>} */
   let parsedCSV = []
-  for (const row of spreadsheet) {
+  for (const row of spreadsheetLines) {
+    /** @type {Array.<string>} */
     const thisRow = row.split(',').map(x => x.trim())
-    let rowObj = {}
+    /** @type {{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}} */
+    let rowObj = { Date: null, Steps: null, Miles: null, 'Total Steps': null, 'Total Miles': null }
     for (const [idx, key] of columnNames.entries()) {
-      rowObj[key] = columnDataTypes[key](thisRow[idx])
+      if (key in columnDataTypes) {
+        rowObj[key] = columnDataTypes[key](thisRow[idx])
+      }
     }
     parsedCSV.push(rowObj)
   }
