@@ -1,11 +1,12 @@
 """
-dataprep.py
+Convert KMZ to parsed JSON lines output.
 
 Copyright (c) 2019 Patrick Wagstrom
 Licensed under the terms of the MIT license
 
 Parses a kmz file obtained for Google My Maps and extracts the coordinates
 of the primary path stored within the file
+
 """
 
 import argparse
@@ -19,18 +20,18 @@ from lxml import etree
 
 
 def parse_kmz(filename: str) -> List[Tuple[float, float]]:
-    """Extract coordinates of first path from the KMZ file
+    """Extract coordinates of first path from the KMZ file.
 
     Args:
-        filename: the name of the file to parse
+        filename (str): the name of the file to parse
 
     Returns:
         A list of the coordinates that represent the path.
 
         Each element in the list is a tuple consisting of a pair of floats
         that represent the latitude, longitude combination for that point.
+
     """
-    print(filename)
     kmz = ZipFile(filename, "r")
     kml = kmz.open("doc.kml", "r").read()
 
@@ -53,10 +54,11 @@ def parse_kmz(filename: str) -> List[Tuple[float, float]]:
 
 
 def calculate_distances(coords: List[Tuple[float, float]]) -> List[Dict]:
-    """Parse a list of coordinates into a dictionary structure with distances.
+    """
+    Parse a list of coordinates into a dictionary structure with distances.
 
     Arguments:
-        coords: A list of tuples representing latitude, longitude pairs
+        coords (List): A list of tuples representing latitude, longitude pairs
 
     Returns:
         A list of the line segments along the path. Each line segment is
@@ -73,6 +75,7 @@ def calculate_distances(coords: List[Tuple[float, float]]) -> List[Dict]:
             "distance": 0.011296110181122795,
             "total": 0.011296110181122795
         }
+
     """
     miles = 0
     od = []
@@ -94,7 +97,7 @@ def calculate_distances(coords: List[Tuple[float, float]]) -> List[Dict]:
 
 def output_jsonl(filename: str, data: List):
     """
-    Outputs a list of dictionaries as JSON lines
+    Output a list of dictionaries as JSON lines.
 
     This is intended as a simple helper function that takes any list of
     dictionaries and outputs it one record per line to a jsonl file. This
@@ -103,9 +106,10 @@ def output_jsonl(filename: str, data: List):
     all the records, or need to seek within the file.
 
     Arguments:
-        filename: the name of the file to write out
-        data: A list of records to write out to the file, each record must
+        filename (str): the name of the file to write out
+        data (List): A list of records to write out to the file, each record must
               be an object that can be dumped via `json.dump`
+
     """
     with open(filename, "w") as outfile:
         for x in data:
@@ -115,6 +119,16 @@ def output_jsonl(filename: str, data: List):
 
 
 def main(infile: str, outfile: str):
+    """Mmain routine to convert KMZ to JSON lines output.
+
+    This is a convenience function to run the entire script and convert the
+    inputfile from a KMZ file to a JSON lines output file.
+
+    Arguments:
+        infile (str): the name of the KMZ file to parse
+        outfile (str): the name of the JSON lines output file
+
+    """
     coords = parse_kmz(infile)
     distances = calculate_distances(coords)
     output_jsonl(outfile, distances)
