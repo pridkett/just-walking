@@ -63,6 +63,14 @@ If everything went well to this point, you should be golden. There's no magic se
 
 ![Sample Walking Map](docs/MapSample.png "My Walking History")
 
+If you want to easily test it locally use this command to start up a web server:
+
+```bash
+python3 -m http.server
+```
+
+And then navigate to http://localhost:8000/
+
 [google-my-maps]: https://www.google.com/maps/d/u/0/
 [mapbox]: https://www.mapbox.com/
 [google-sheet-walking]: https://docs.google.com/spreadsheets/d/e/2PACX-1vQLEp90dQUSz9CaQjziMQ60UKZZVXfc2QlbrIEn7qJrgKalO9IiY_OfZiITEGECU_c0RdvnEjgraGiC/pubhtml?gid=0&single=true

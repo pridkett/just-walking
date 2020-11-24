@@ -57,7 +57,7 @@ const defaultPolylineStyle = { color: '#3388ff', opacity: 1, weight: 3 }
  */
 const highlightPolylineStyle = { color: 'red', opacity: 1, weight: 5 }
 
-function showMap (latitude, longitude) {
+function showMap(latitude, longitude) {
   myMap.setView([latitude, longitude], 13)
 
   L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
@@ -82,7 +82,7 @@ function showMap (latitude, longitude) {
  * @param {Array.<{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}>} spreadsheet line split CSV of the walking progress
  *   CSV
  */
-function parseCoordinates (coordinates, spreadsheet) {
+function parseCoordinates(coordinates, spreadsheet) {
   /** @type {Array.<number>} */
   const first = JSON.parse(coordinates[0])
   /** @type {Array.<number>} */
@@ -161,7 +161,7 @@ function parseCoordinates (coordinates, spreadsheet) {
  * @param {string} spreadsheet the CSV spreadsheet as a string
  * @return {Array.<{Date: Date, Steps: number, Miles: number, 'Total Steps': number, 'Total Miles': number}>}
  */
-function parseCSV (spreadsheet) {
+function parseCSV(spreadsheet) {
   /** @type {Array.<string>} */
   const spreadsheetLines = spreadsheet.split('\n')
   /** @type {Array.<string>} */
@@ -187,7 +187,8 @@ try {
   Promise.all([
     window.fetch(pathFilename)
       .then(response => response.text()),
-    window.fetch(spreadsheetUrl)
+    window.fetch(spreadsheetUrl, { method: 'GET' })
+      .then(response => { console.log(response); return response })
       .then(response => response.text())
       .then(response => parseCSV(response))
   ]).then(data => parseCoordinates(data[0].split('\n'), data[1]))
