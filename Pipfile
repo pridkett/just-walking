@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+[dev-packages]
+lxml = "*"
+geopy = "*"
+
+[requires]
+python_version = "3.11"
+python_full_version = "3.11.7"
+
+[scripts]
+convert = "sh -c 'python ./python/dataprep.py \"python/Directions from West Quoddy Head Lighthouse, South Lubec Road, Lubec, ME, USA to Cape Alava, Washington, USA.kmz\" ./web/walkingPath.jsonl'"

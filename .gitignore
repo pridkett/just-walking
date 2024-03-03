@@ -1,2 +1,3 @@
 .mypy_cache
 web/config.js
+web/walkingPath.jsonl

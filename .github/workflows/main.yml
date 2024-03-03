@@ -19,6 +19,20 @@ jobs:
       with:
         submodules: 'true'
 
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11.7' # Specify the Python version you need for your project
+  
+    - name: Install pipenv
+      run: python -m pip install pipenv
+  
+    - name: Install dependencies with pipenv
+      run: pipenv install --dev
+  
+    - name: Run convert task
+      run: pipenv run convert
+
     - name: Replace Google Sheets URL and MapBox Token
       env:
         GOOGLE_SHEETS_URL: ${{ vars.GOOGLE_SHEETS_URL }}
@@ -29,7 +43,7 @@ jobs:
         sed -i "s|\[PASTE YOUR GOOGLE SHEETS URL HERE\]|${escaped_google_sheets_url}|g" web/config.js
         sed -i "s|\[PASTE YOUR MAPBOX TOKEN HERE\]|${escaped_mapbox_token}|g" web/config.js
 
-    - name: rsync deployments
+    - name: Deploy to production server using rsync
       uses: burnett01/rsync-deployments@6.0.0
       with:
         switches: -avz
