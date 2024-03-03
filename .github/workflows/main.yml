@@ -1,0 +1,41 @@
+name: push to patrick.wagstrom.net on push to master
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clean build directory
+      run: rm -rf web
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+
+    - name: Replace Google Sheets URL and MapBox Token
+      env:
+        GOOGLE_SHEETS_URL: ${{ vars.GOOGLE_SHEETS_URL }}
+        MAPBOX_TOKEN: ${{ vars.MAPBOX_TOKEN}}
+      run: |
+        escaped_google_sheets_url=$(echo "${GOOGLE_SHEETS_URL}" | sed 's|&|\\&|g')
+        escaped_mapbox_token=$(echo "${MAPBOX_TOKEN}" | sed 's|&|\\&|g')
+        sed -i "s|\[PASTE YOUR GOOGLE SHEETS URL HERE\]|${escaped_google_sheets_url}|g" web/config.js
+        sed -i "s|\[PASTE YOUR MAPBOX TOKEN HERE\]|${escaped_mapbox_token}|g" web/config.js
+
+    - name: rsync deployments
+      uses: burnett01/rsync-deployments@6.0.0
+      with:
+        switches: -avz
+        path: web/
+        remote_path: ${{ secrets.RSYNC_SERVER_DESTINATION }}
+        remote_port: ${{ secrets.RSYNC_SERVER_PORT }}
+        remote_host: ${{ secrets.RSYNC_SERVER_HOST }}
+        remote_user: ${{ secrets.RSYNC_USERNAME }}
+        remote_key: ${{ secrets.RSYNC_SERVER_SSH_KEY }}
