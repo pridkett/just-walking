@@ -65,7 +65,7 @@ function showMap(latitude, longitude) {
     tileSize: 512,
     maxZoom: 18,
     zoomOffset: -1,
-    id: 'mapbox/streets-v11',
+    id: 'mapbox/streets-v12',
     accessToken: mapboxToken
   }).addTo(myMap)
 }
