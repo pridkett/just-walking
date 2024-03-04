@@ -95,7 +95,7 @@ def calculate_distances(coords: List[Tuple[float, float]]) -> List[Dict]:
     return od
 
 
-def output_jsonl(filename: str, data: List):
+def output_jsonl(filename: str, data: List, verbose: bool=False) -> int:
     """
     Output a list of dictionaries as JSON lines.
 
@@ -109,17 +109,21 @@ def output_jsonl(filename: str, data: List):
         filename (str): the name of the file to write out
         data (List): A list of records to write out to the file, each record must
               be an object that can be dumped via `json.dump`
-
+    Returns:
+        number of lines written to the file
     """
+    lines = 0
     with open(filename, "w") as outfile:
         for x in data:
-            print(json.dumps(x))
+            if verbose:
+                print(json.dumps(x))
             json.dump(x, outfile)
             outfile.write("\n")
+            lines = lines + 1
+    return lines
 
-
-def main(infile: str, outfile: str):
-    """Mmain routine to convert KMZ to JSON lines output.
+def main(infile: str, outfile: str, verbose: bool=False):
+    """Main routine to convert KMZ to JSON lines output.
 
     This is a convenience function to run the entire script and convert the
     inputfile from a KMZ file to a JSON lines output file.
@@ -131,7 +135,8 @@ def main(infile: str, outfile: str):
     """
     coords = parse_kmz(infile)
     distances = calculate_distances(coords)
-    output_jsonl(outfile, distances)
+    lines_converted = output_jsonl(outfile, distances, verbose)
+    print(f"Wrote {lines_converted} lines to {outfile}")
 
 
 if __name__ == "__main__":
@@ -141,6 +146,9 @@ if __name__ == "__main__":
     parser.add_argument('outfile', metavar='outfile', type=str,
                         help="JSONL file to write as output",
                         default="output.jsonl")
+    parser.add_argument('--verbose', action='store_true', default=False,
+                        help="Print out each record as it is written")
+    
     args = parser.parse_args()
 
-    main(infile=args.infile, outfile=args.outfile)
+    main(infile=args.infile, outfile=args.outfile, verbose=args.verbose)
